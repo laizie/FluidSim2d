@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FLIP Fluid on a Round Display — Concepts &amp; Code Map</title>
+<style>
+  :root{
+    --bg:#0c1014; --panel:#121922; --panel2:#0f151c; --ink:#dfe7ef; --muted:#8da0b3;
+    --line:#1f2a36; --accent:#33c6dc; --accent2:#5ad1a8; --warn:#e0a84b; --bad:#e06b6b;
+    --code:#0a0f14; --radius:12px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{display:grid; grid-template-columns:248px minmax(0,1fr); gap:0; max-width:1240px; margin:0 auto;}
+  /* TOC */
+  nav{
+    position:sticky; top:0; align-self:start; height:100vh; overflow:auto;
+    padding:28px 18px; border-right:1px solid var(--line); background:var(--panel2);
+  }
+  nav h2{font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin:18px 0 8px}
+  nav a{display:block; color:var(--muted); text-decoration:none; padding:4px 10px; border-radius:7px; font-size:14px}
+  nav a:hover{color:var(--ink); background:#172029}
+  nav .brand{font-weight:700; color:var(--ink); font-size:15px; letter-spacing:.02em}
+  nav .brand span{color:var(--accent)}
+  main{padding:40px 48px 120px; min-width:0}
+  header.hero{padding-bottom:28px; border-bottom:1px solid var(--line); margin-bottom:8px}
+  header.hero h1{font-size:30px; line-height:1.2; margin:0 0 10px}
+  header.hero p{color:var(--muted); margin:0; max-width:70ch}
+  section{padding:34px 0; border-bottom:1px solid var(--line)}
+  section:last-of-type{border-bottom:0}
+  h2.sec{font-size:22px; margin:0 0 6px; display:flex; align-items:baseline; gap:12px}
+  h2.sec .n{font-size:13px; color:var(--accent); font-weight:700; font-variant-numeric:tabular-nums}
+  h3{font-size:17px; margin:26px 0 8px; color:#eef4fa}
+  p{max-width:74ch}
+  .lead{color:var(--muted)}
+  code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; font-size:13.5px; background:#16202b; padding:.12em .4em; border-radius:5px; color:#bfe7ef}
+  pre{background:var(--code); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; overflow:auto; margin:14px 0}
+  pre code{background:none; padding:0; color:#cdd9e5; font-size:13px; line-height:1.6}
+  .tok-c{color:#5f7488} .tok-k{color:#c08fe0} .tok-f{color:#7cc7ff} .tok-s{color:#9bdc9b} .tok-n{color:#e0b15a}
+  .callout{border-left:3px solid var(--accent); background:var(--panel); padding:12px 16px; border-radius:0 10px 10px 0; margin:16px 0}
+  .callout.warn{border-color:var(--warn)} .callout.key{border-color:var(--accent2)}
+  .callout .lbl{font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-weight:700}
+  .callout.warn .lbl{color:var(--warn)} .callout.key .lbl{color:var(--accent2)}
+  table{border-collapse:collapse; width:100%; margin:16px 0; font-size:14px}
+  th,td{border:1px solid var(--line); padding:8px 12px; text-align:left}
+  th{background:var(--panel); color:#eef4fa; font-weight:600}
+  td code{font-size:12.5px}
+  .fig{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px; margin:18px 0; text-align:center}
+  .fig figcaption{color:var(--muted); font-size:13px; margin-top:10px; text-align:center}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  .pill{display:inline-block; font-size:11px; padding:2px 9px; border-radius:20px; background:#16202b; color:var(--accent); border:1px solid var(--line); margin-right:6px}
+  ul.steps{list-style:none; padding:0; counter-reset:s}
+  ul.steps li{position:relative; padding:10px 0 10px 44px; border-bottom:1px dashed var(--line)}
+  ul.steps li::before{counter-increment:s; content:counter(s); position:absolute; left:0; top:10px; width:28px; height:28px; border-radius:50%; background:var(--panel); border:1px solid var(--accent); color:var(--accent); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700}
+  ul.steps li b{color:#eef4fa}
+  .muted{color:var(--muted)}
+  .you{background:linear-gradient(180deg,#13201b,#0f1714); border:1px solid #1f3a2e; border-radius:var(--radius); padding:16px 18px; margin:16px 0}
+  .you .lbl{color:var(--accent2); font-weight:700; font-size:12px; letter-spacing:.1em; text-transform:uppercase}
+  a.inline{color:var(--accent)}
+  svg text{font-family:inherit}
+  @media (max-width:880px){ .wrap{grid-template-columns:1fr} nav{display:none} main{padding:28px 20px} .grid2{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav>
+  <div class="brand">FLIP&nbsp;<span>/</span>&nbsp;Round Display</div>
+  <div class="muted" style="font-size:12px;margin-top:4px">concepts → code map</div>
+  <h2>Physics</h2>
+  <a href="#what">1 · What you're actually simulating</a>
+  <a href="#views">2 · Grid vs. particles</a>
+  <a href="#flip">3 · Why FLIP is a hybrid</a>
+  <a href="#ideas">4 · The four governing ideas</a>
+  <a href="#mac">5 · The staggered (MAC) grid</a>
+  <a href="#loop">6 · The simulation loop</a>
+  <a href="#pressure">7 · Pressure: the hard part</a>
+  <a href="#transfer">8 · P2G &amp; G2P transfers</a>
+  <a href="#stability">9 · Stability &amp; the timestep</a>
+  <h2>Code</h2>
+  <a href="#data">10 · Data structures</a>
+  <a href="#skeleton">11 · Mapping to your loop</a>
+  <a href="#render">12 · Drawing to a circle</a>
+  <a href="#order">13 · Suggested build order</a>
+  <a href="#left">14 · What's left to you</a>
+</nav>
+
+<main>
+<header class="hero">
+  <h1>FLIP fluid on a 240×240 round display</h1>
+  <p>The physics first, then how each idea turns into code that fits your <code>setup() / loop() / update()</code> skeleton. This is a map, not a finished route — it explains the concepts and shows the <em>shape</em> of the solution, then hands the steering wheel back to you.</p>
+</header>
+
+<!-- ============================================================ -->
+<section id="what">
+  <h2 class="sec"><span class="n">01</span> What you're actually simulating</h2>
+  <p>The first mental flip: <b>you are not simulating "water."</b> You are simulating a <b>velocity field</b> — an arrow at every point in space saying "if something were here, this is how fast and which way it would move." Water is just a way to <em>see</em> that field. Everything else in fluid sim is bookkeeping to keep that field physically believable as time advances.</p>
+  <p>A fluid solver answers one question, over and over, in tiny time steps of length <code>dt</code>:</p>
+  <div class="callout key"><span class="lbl">The whole problem</span><br>
+  Given the velocity field <em>right now</em>, and the forces acting on it (gravity, walls), what does the velocity field look like a moment <code>dt</code> later — without the fluid magically gaining or losing volume?</div>
+  <p>That last clause — "without gaining or losing volume" — is <b>incompressibility</b>, and it's the single most important and most expensive constraint in the whole simulation. Hold onto it; sections 4 and 7 are entirely about enforcing it.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="views">
+  <h2 class="sec"><span class="n">02</span> Two ways to hold a fluid: grid vs. particles</h2>
+  <p>There are two classic ways to represent that velocity field, and they have opposite strengths.</p>
+
+  <div class="fig">
+  <svg width="560" height="220" viewBox="0 0 560 220">
+    <!-- Eulerian grid -->
+    <text x="105" y="20" fill="#33c6dc" font-size="13" text-anchor="middle" font-weight="700">EULERIAN — grid</text>
+    <g stroke="#2a3744" stroke-width="1">
+      <rect x="20" y="36" width="170" height="150" fill="#0f151c"/>
+      <line x1="20" y1="86" x2="190" y2="86"/><line x1="20" y1="136" x2="190" y2="136"/>
+      <line x1="76" y1="36" x2="76" y2="186"/><line x1="133" y1="36" x2="133" y2="186"/>
+    </g>
+    <g stroke="#5ad1a8" stroke-width="2" fill="none">
+      <line x1="48" y1="61" x2="66" y2="55" marker-end="url(#ah)"/>
+      <line x1="105" y1="61" x2="120" y2="68" marker-end="url(#ah)"/>
+      <line x1="161" y1="61" x2="172" y2="54" marker-end="url(#ah)"/>
+      <line x1="48" y1="111" x2="64" y2="118" marker-end="url(#ah)"/>
+      <line x1="105" y1="111" x2="118" y2="104" marker-end="url(#ah)"/>
+      <line x1="161" y1="111" x2="174" y2="116" marker-end="url(#ah)"/>
+      <line x1="48" y1="161" x2="63" y2="155" marker-end="url(#ah)"/>
+      <line x1="105" y1="161" x2="122" y2="166" marker-end="url(#ah)"/>
+      <line x1="161" y1="161" x2="170" y2="153" marker-end="url(#ah)"/>
+    </g>
+    <text x="105" y="206" fill="#8da0b3" font-size="11" text-anchor="middle">velocity stored at fixed points</text>
+
+    <!-- Lagrangian particles -->
+    <text x="430" y="20" fill="#33c6dc" font-size="13" text-anchor="middle" font-weight="700">LAGRANGIAN — particles</text>
+    <rect x="345" y="36" width="170" height="150" fill="#0f151c" stroke="#2a3744"/>
+    <g fill="#33c6dc">
+      <circle cx="380" cy="70" r="3"/><circle cx="410" cy="95" r="3"/><circle cx="455" cy="62" r="3"/>
+      <circle cx="490" cy="110" r="3"/><circle cx="370" cy="130" r="3"/><circle cx="430" cy="150" r="3"/>
+      <circle cx="475" cy="160" r="3"/><circle cx="400" cy="120" r="3"/><circle cx="460" cy="120" r="3"/>
+    </g>
+    <g stroke="#5ad1a8" stroke-width="1.6" fill="none">
+      <line x1="380" y1="70" x2="392" y2="76" marker-end="url(#ah)"/>
+      <line x1="455" y1="62" x2="466" y2="70" marker-end="url(#ah)"/>
+      <line x1="430" y1="150" x2="440" y2="142" marker-end="url(#ah)"/>
+      <line x1="490" y1="110" x2="498" y2="120" marker-end="url(#ah)"/>
+    </g>
+    <text x="430" y="206" fill="#8da0b3" font-size="11" text-anchor="middle">velocity carried by moving dots</text>
+    <defs><marker id="ah" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#5ad1a8"/></marker></defs>
+  </svg>
+  <figcaption>Two representations of the same field. FLIP uses <b>both at once.</b></figcaption>
+  </div>
+
+  <h3>Eulerian (a fixed grid)</h3>
+  <p>Lay a grid over the screen and store velocity in each cell. The grid never moves; the fluid flows <em>through</em> it. <span class="pill">good</span> Enforcing incompressibility is natural — neighbouring cells are always known. <span class="pill" style="color:var(--bad);border-color:#3a2222">bad</span> Moving quantities around the grid ("advection") smears them out over time. Sharp splashes turn into mush. This blurring is called <b>numerical diffusion</b>.</p>
+
+  <h3>Lagrangian (free particles)</h3>
+  <p>Represent the fluid as thousands of dots that carry their own velocity and just fly around. <span class="pill">good</span> Advection is <em>free and exact</em> — a particle moving is the advection; nothing smears. <span class="pill" style="color:var(--bad);border-color:#3a2222">bad</span> Enforcing incompressibility is painful, because "who are my neighbours?" changes every frame.</p>
+
+  <div class="callout"><span class="lbl">The tension</span><br>Grids are great at <b>pressure/incompressibility</b> and bad at <b>advection</b>. Particles are the exact opposite. Neither alone is good at both.</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="flip">
+  <h2 class="sec"><span class="n">03</span> Why FLIP is a hybrid</h2>
+  <p><b>FLIP = Fluid-Implicit-Particle.</b> Its trick is to use each representation only for what it's good at, and to convert between them every single frame:</p>
+  <ul class="steps">
+    <li><b>Particles do the moving (advection).</b> Their positions and velocities are the "real" state that persists between frames.</li>
+    <li>Each frame, <b>splat</b> the particles' velocities onto a temporary grid (this is <b>P2G</b>).</li>
+    <li>On the grid, do the thing grids are good at: <b>add gravity and enforce incompressibility</b> via a pressure solve.</li>
+    <li><b>Read the corrected velocities back</b> onto the particles (<b>G2P</b>), then throw the grid away.</li>
+    <li>Move the particles. Repeat.</li>
+  </ul>
+  <p>The grid is scratch paper, rebuilt and discarded every frame. The particles are the memory. That is the entire idea of FLIP — everything below is detail.</p>
+  <div class="callout key"><span class="lbl">PIC vs FLIP — the one subtlety that defines the method</span><br>
+  When you read velocities back from the grid (G2P), you have a choice:
+  <ul style="margin:8px 0">
+    <li><b>PIC</b> (Particle-In-Cell): copy the grid's <em>new velocity</em> onto the particle. Stable, but smears (back to numerical diffusion).</li>
+    <li><b>FLIP</b>: add only the <em>change</em> the grid made this frame (<code>new − old</code>) to the particle's existing velocity. Lively and detailed, but can get noisy/unstable.</li>
+  </ul>
+  Real solvers <b>blend</b> them: <code>vel = flip·α + pic·(1−α)</code> with <code>α ≈ 0.95–0.99</code>. Mostly FLIP for energy, a little PIC for stability. This single <code>α</code> knob is one of the first things worth exposing and tuning in your test harness.</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="ideas">
+  <h2 class="sec"><span class="n">04</span> The four governing ideas (low-math version)</h2>
+  <p>You can build a working FLIP solver understanding these four ideas conceptually. The symbols are here so the literature is readable later, but you don't need to manipulate them by hand.</p>
+
+  <h3>1 · Velocity field <code>u</code></h3>
+  <p>The vector (vx, vy) at every point. Everything operates on this.</p>
+
+  <h3>2 · Advection — "go with the flow"</h3>
+  <p>Stuff gets carried along by the velocity field. In FLIP this is just <em>moving the particles</em>, which is why FLIP barely diffuses. Conceptually: <code>position += velocity · dt</code> (though you'll want a slightly better integrator — see §9).</p>
+
+  <h3>3 · Incompressibility — "volume in = volume out"</h3>
+  <p>For any little region, whatever flows in must flow out, so volume is conserved. The mathematical statement is that the <b>divergence</b> of the velocity field is zero everywhere: <code>∇·u = 0</code>. Divergence just means "net outflow from this cell." Positive divergence = fluid being created (cell is a source); negative = fluid vanishing (a sink). Both are unphysical, so we drive it to zero every frame.</p>
+
+  <div class="fig">
+  <svg width="520" height="170" viewBox="0 0 520 170">
+    <text x="130" y="18" fill="#e06b6b" font-size="13" text-anchor="middle" font-weight="700">divergent (bad)</text>
+    <rect x="80" y="40" width="100" height="100" fill="#0f151c" stroke="#2a3744"/>
+    <g stroke="#e06b6b" stroke-width="2.4" fill="none" marker-end="url(#ar)">
+      <line x1="130" y1="40" x2="130" y2="14"/><line x1="180" y1="90" x2="206" y2="90"/>
+      <line x1="130" y1="140" x2="130" y2="166"/><line x1="80" y1="90" x2="54" y2="90"/>
+    </g>
+    <text x="130" y="95" fill="#e06b6b" font-size="20" text-anchor="middle" font-weight="700">↗</text>
+    <text x="130" y="158" fill="#8da0b3" font-size="11" text-anchor="middle" dy="14">net outflow ≠ 0</text>
+
+    <text x="390" y="18" fill="#5ad1a8" font-size="13" text-anchor="middle" font-weight="700">divergence-free (good)</text>
+    <rect x="340" y="40" width="100" height="100" fill="#0f151c" stroke="#2a3744"/>
+    <g stroke="#5ad1a8" stroke-width="2.4" fill="none" marker-end="url(#ag)">
+      <line x1="390" y1="14" x2="390" y2="40"/>
+      <line x1="390" y1="90" x2="416" y2="90"/>
+    </g>
+    <g stroke="#5ad1a8" stroke-width="2.4" fill="none">
+      <line x1="390" y1="140" x2="390" y2="166" marker-end="url(#ag)"/>
+      <line x1="364" y1="90" x2="340" y2="90"/>
+    </g>
+    <text x="390" y="158" fill="#8da0b3" font-size="11" text-anchor="middle" dy="14">in = out</text>
+    <defs>
+      <marker id="ar" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#e06b6b"/></marker>
+      <marker id="ag" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#5ad1a8"/></marker>
+    </defs>
+  </svg>
+  <figcaption>Incompressibility = make every cell's net flow zero. The tool that does it is pressure.</figcaption>
+  </div>
+
+  <h3>4 · Pressure — the enforcer</h3>
+  <p>Pressure is the field you invent specifically to <em>cancel</em> divergence. Wherever fluid is piling up (positive divergence), pressure rises and pushes it back out; wherever it's thinning, pressure drops and pulls it in. You compute the pressure field that makes the velocity divergence-free, then subtract its gradient from the velocity. That step is called the <b>pressure projection</b>, and it's §7 — the expensive heart of the solver.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="mac">
+  <h2 class="sec"><span class="n">05</span> The staggered (MAC) grid</h2>
+  <p>Before the loop, one structural decision that trips up everyone who stores velocity "in the cell." If you store vx, vy, <em>and</em> pressure all at the same point (cell centre), the math for divergence and pressure-gradient ends up sampling cells two apart, and the solution decouples into a useless checkerboard pattern.</p>
+  <p>The fix is the <b>MAC grid</b> (Marker-And-Cell), a.k.a. a <b>staggered grid</b>: store each quantity where it's most natural.</p>
+
+  <div class="fig">
+  <svg width="320" height="300" viewBox="0 0 320 300">
+    <rect x="60" y="50" width="200" height="200" fill="#0f151c" stroke="#33c6dc" stroke-width="1.5"/>
+    <!-- pressure center -->
+    <circle cx="160" cy="150" r="6" fill="#e0a84b"/>
+    <text x="160" y="178" fill="#e0a84b" font-size="13" text-anchor="middle" font-weight="700">p</text>
+    <text x="160" y="194" fill="#8da0b3" font-size="11" text-anchor="middle">pressure / cell type</text>
+    <!-- u on vertical faces -->
+    <g stroke="#5ad1a8" stroke-width="2.4" fill="none" marker-end="url(#au)">
+      <line x1="44" y1="150" x2="76" y2="150"/>
+      <line x1="244" y1="150" x2="276" y2="150"/>
+    </g>
+    <text x="60" y="40" fill="#5ad1a8" font-size="13" text-anchor="middle" font-weight="700">u</text>
+    <text x="260" y="40" fill="#5ad1a8" font-size="13" text-anchor="middle" font-weight="700">u</text>
+    <!-- v on horizontal faces -->
+    <g stroke="#7cc7ff" stroke-width="2.4" fill="none" marker-end="url(#av)">
+      <line x1="160" y1="34" x2="160" y2="66"/>
+      <line x1="160" y1="234" x2="160" y2="266"/>
+    </g>
+    <text x="284" y="56" fill="#5ad1a8" font-size="12">vx on L/R faces</text>
+    <text x="284" y="252" fill="#7cc7ff" font-size="12">vy on T/B faces</text>
+    <defs>
+      <marker id="au" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#5ad1a8"/></marker>
+      <marker id="av" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#7cc7ff"/></marker>
+    </defs>
+  </svg>
+  <figcaption>One cell. Pressure lives at the centre; horizontal velocity on the left/right faces; vertical velocity on the top/bottom faces.</figcaption>
+  </div>
+
+  <p>Consequence for your arrays: if the pressure grid is <code>N×N</code>, the horizontal-velocity array <code>u</code> is <code>(N+1)×N</code> and the vertical-velocity array <code>v</code> is <code>N×(N+1)</code>. Getting these dimensions and the index bookkeeping right is most of the early debugging. The payoff: divergence of a cell is just <code>(u_right − u_left) + (v_top − v_bottom)</code> — neighbours one step away, no checkerboard.</p>
+  <div class="callout warn"><span class="lbl">Heads up</span><br>The single most common beginner bug in this entire project is an off-by-one in the staggered arrays. Decide your indexing convention <em>on paper</em> before you type it.</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="loop">
+  <h2 class="sec"><span class="n">06</span> The simulation loop</h2>
+  <p>Each frame runs the same fixed sequence (this is called <b>operator splitting</b> — we handle forces, incompressibility, and advection as separate sequential stages). A clean teaching order:</p>
+
+  <div class="fig">
+  <svg width="540" height="220" viewBox="0 0 540 220">
+    <g font-size="12" text-anchor="middle">
+      <g><rect x="20" y="90" width="92" height="46" rx="8" fill="#121922" stroke="#33c6dc"/><text x="66" y="110" fill="#dfe7ef" font-weight="700">P2G</text><text x="66" y="126" fill="#8da0b3">splat→grid</text></g>
+      <g><rect x="132" y="90" width="92" height="46" rx="8" fill="#121922" stroke="#33c6dc"/><text x="178" y="110" fill="#dfe7ef" font-weight="700">+ gravity</text><text x="178" y="126" fill="#8da0b3">forces</text></g>
+      <g><rect x="244" y="90" width="92" height="46" rx="8" fill="#121922" stroke="#e0a84b"/><text x="290" y="108" fill="#e0a84b" font-weight="700">PRESSURE</text><text x="290" y="124" fill="#8da0b3">∇·u → 0</text></g>
+      <g><rect x="356" y="90" width="92" height="46" rx="8" fill="#121922" stroke="#33c6dc"/><text x="402" y="110" fill="#dfe7ef" font-weight="700">G2P</text><text x="402" y="126" fill="#8da0b3">grid→particles</text></g>
+      <g><rect x="356" y="160" width="92" height="44" rx="8" fill="#121922" stroke="#5ad1a8"/><text x="402" y="180" fill="#5ad1a8" font-weight="700">advect</text><text x="402" y="195" fill="#8da0b3">move dots</text></g>
+    </g>
+    <g stroke="#3a4a59" stroke-width="1.6" fill="none" marker-end="url(#al)">
+      <line x1="112" y1="113" x2="130" y2="113"/>
+      <line x1="224" y1="113" x2="242" y2="113"/>
+      <line x1="336" y1="113" x2="354" y2="113"/>
+      <line x1="402" y1="138" x2="402" y2="158"/>
+      <path d="M356,182 C200,182 120,182 66,138"/>
+    </g>
+    <defs><marker id="al" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#3a4a59"/></marker></defs>
+    <text x="210" y="178" fill="#5ad1a8" font-size="11">loop ↺</text>
+  </svg>
+  </div>
+
+  <ul class="steps">
+    <li><b>P2G — transfer particle velocities to the grid.</b> For each particle, distribute its velocity to the nearby grid faces (weighted by distance). Also accumulate the weights so you can normalise. <b>Save a copy of this grid</b> — FLIP needs the "before" state in G2P.</li>
+    <li><b>Mark cells.</b> A cell holds fluid if it contains particles; otherwise it's air. The boundary (your circle wall) is solid.</li>
+    <li><b>Add gravity</b> to the grid velocities: <code>v += g·dt</code> on the relevant faces.</li>
+    <li><b>Pressure projection.</b> Compute each cell's divergence, solve for the pressure that cancels it, subtract the pressure gradient. Now the grid velocity is incompressible. Enforce wall boundaries (no flow through solids). <span class="muted">→ §7</span></li>
+    <li><b>G2P — transfer back to particles</b> using the FLIP/PIC blend from §3.</li>
+    <li><b>Advect.</b> Move particles by their velocity. If a particle leaves the circle, project it back inside (collision with the round wall). <span class="muted">→ §9</span></li>
+  </ul>
+  <div class="callout"><span class="lbl">Note</span><br>Different references order these slightly differently (some advect first). Pick one order, get it working, <em>then</em> experiment. Consistency beats correctness-in-theory while you're learning.</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="pressure">
+  <h2 class="sec"><span class="n">07</span> Pressure projection — the hard, expensive part</h2>
+  <p>This is where ~80% of your CPU time goes and where the "is this feasible on a microcontroller?" question is really decided. The goal: find a pressure value per fluid cell such that subtracting its gradient makes every cell divergence-free.</p>
+  <p>Mathematically that's a <b>Poisson equation</b>, <code>∇²p = (ρ/dt)·∇·u</code>, which is a big linear system: thousands of cells, each coupled to its four neighbours. You don't solve it exactly. You <b>relax</b> toward the answer with an iterative method.</p>
+
+  <h3>The intuition: iterative relaxation</h3>
+  <p>Each cell repeatedly nudges itself toward the average of its neighbours (adjusted by its divergence). Do that sweep enough times and the whole field settles into the pressure that balances flow. Two common methods:</p>
+  <table>
+    <tr><th>Method</th><th>Idea</th><th>Notes for embedded</th></tr>
+    <tr><td><b>Jacobi</b></td><td>Update every cell from the <em>old</em> neighbour values, then swap buffers.</td><td>Needs two buffers; trivially parallel (good for dual-core / SIMD). Converges slowly.</td></tr>
+    <tr><td><b>Gauss–Seidel</b></td><td>Update in place, using already-updated neighbours within the same sweep.</td><td>One buffer; ~2× faster convergence. Order-dependent. <b>Best default for a single core.</b></td></tr>
+    <tr><td><b>Red–Black GS</b></td><td>Gauss–Seidel on a checkerboard so it parallelises.</td><td>The sweet spot if you have two cores (e.g. ESP32).</td></tr>
+  </table>
+
+  <div class="callout key"><span class="lbl">The embedded-friendly cheat</span><br>
+  A "perfect" solve might need hundreds of iterations. On a microcontroller you <b>cap the iteration count</b> — say 20–60 sweeps — and accept a slightly compressible fluid. It looks fine. This fixed budget is exactly what makes the per-frame cost predictable and is the lever you trade against frame rate. More iterations = stiffer, less jiggly fluid = slower frame.</p></div>
+
+  <p>Shape of one Gauss–Seidel sweep (pseudocode — the indexing and boundary handling are yours):</p>
+  <pre><code><span class="tok-k">for</span> iter <span class="tok-k">in</span> 0..MAX_ITERS:
+    <span class="tok-k">for each</span> fluid cell (i,j):
+        <span class="tok-c"># count how many of the 4 neighbours are NOT solid wall</span>
+        <span class="tok-c"># divergence = (u[i+1,j]-u[i,j]) + (v[i,j+1]-v[i,j])</span>
+        <span class="tok-c"># nudge this cell's velocities so its divergence shrinks,</span>
+        <span class="tok-c"># pushing the correction onto the open faces only</span>
+        ...your math here, respecting solid walls...
+</code></pre>
+  <p class="muted">There are two equivalent ways to code this: solve for a pressure array then subtract its gradient, or do the "divergence-pushing" form above that adjusts face velocities directly (Stam/“ten-minute fluids” style). The second is shorter and a great first implementation; the first generalises better. Your call.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="transfer">
+  <h2 class="sec"><span class="n">08</span> P2G and G2P — the transfers</h2>
+  <p>These two steps are how the particles and the grid talk. Both rely on <b>bilinear weighting</b>: a particle sitting between grid points contributes to (or reads from) the four surrounding points in proportion to how close it is to each.</p>
+
+  <h3>P2G (scatter)</h3>
+  <p>For each particle, for each of the 4 surrounding velocity samples: add <code>weight · particleVelocity</code> to that sample, and add <code>weight</code> to a parallel "weight sum" array. After all particles, divide each sample by its weight sum → a proper weighted average. Empty (zero-weight) samples are "air" and need handling.</p>
+
+  <h3>G2P (gather)</h3>
+  <p>For each particle, sample the grid at its position with the same bilinear weights to get <code>v_new</code>. Sample the <em>saved</em> grid (from step 1) the same way to get <code>v_old</code>. Then apply the blend:</p>
+  <pre><code><span class="tok-c">// the line that makes it "FLIP"</span>
+v_pic  = v_new
+v_flip = particle.vel + (v_new - v_old)   <span class="tok-c">// add only the grid's *change*</span>
+particle.vel = ALPHA * v_flip + (1 - ALPHA) * v_pic
+</code></pre>
+  <div class="callout"><span class="lbl">Why the weights must match</span><br>Use the <em>identical</em> weighting scheme in P2G and G2P. If they differ, energy leaks and the fluid either dies or explodes. This symmetry is the quiet rule behind a stable FLIP solver.</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="stability">
+  <h2 class="sec"><span class="n">09</span> Stability and the timestep</h2>
+  <p>Your open file has <code>int dt = 0.01;</code>. Two problems hiding in that one line, and they're great first lessons:</p>
+  <ul class="steps">
+    <li><b>Type truncation.</b> <code>int dt = 0.01</code> stores <b>0</b>. Time never advances. <code>dt</code> must be a floating type.</li>
+    <li><b>Fixed vs. real-time dt.</b> A constant <code>dt</code> gives reproducible, stable physics (recommended while learning). Tying <code>dt</code> to real elapsed time makes it "real-time" but lets a slow frame inject a huge step that blows up the sim.</li>
+  </ul>
+  <h3>The CFL condition</h3>
+  <p>The stability rule of thumb: <b>no particle should cross more than about one grid cell in a single step.</b> Formally <code>dt ≤ C · h / |v_max|</code> where <code>h</code> is cell size and <code>C ≈ 1</code>. If your fluid moves fast, either shrink <code>dt</code> or take several <b>substeps</b> per frame. Violate this and particles tunnel through walls and the solver diverges.</p>
+  <h3>Better advection than Euler</h3>
+  <p><code>pos += vel·dt</code> (forward Euler) works but drifts. A midpoint/RK2 step — sample the velocity halfway along the move, then move using that — is dramatically more stable for almost no cost. Worth doing once the basics run.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="data">
+  <h2 class="sec"><span class="n">10</span> Mapping to code — data structures</h2>
+  <p>Now the bridge from concepts to your project. First, the state you must persist between frames. Approximate RAM budget matters because you're aiming at hardware — here's the shape (numbers are illustrative for a 64×64 sim grid + 4096 particles):</p>
+  <table>
+    <tr><th>Data</th><th>Why</th><th>Rough size (float)</th></tr>
+    <tr><td><code>u[(N+1)*N]</code>, <code>v[N*(N+1)]</code></td><td>staggered velocity (the field)</td><td>~67 KB at N=64</td></tr>
+    <tr><td><code>uPrev</code>, <code>vPrev</code></td><td>saved "before" grid for FLIP delta</td><td>~67 KB</td></tr>
+    <tr><td><code>weightU</code>, <code>weightV</code></td><td>normalisation for P2G</td><td>~67 KB</td></tr>
+    <tr><td><code>pressure[N*N]</code> / <code>cellType[N*N]</code></td><td>solve + fluid/air/solid marks</td><td>~16 KB + 4 KB</td></tr>
+    <tr><td><code>particles[ ]</code> (x,y,vx,vy)</td><td>the persistent fluid state</td><td>~64 KB at 4096</td></tr>
+  </table>
+  <div class="callout warn"><span class="lbl">Reality check for embedded</span><br>That's already ~350 KB at N=64 in plain floats — comfortably past an Uno, fine on a Teensy 4.x, tight-but-doable on ESP32. Two of your biggest future decisions live here: <b>shrink the grid</b> (N=32 quarters most of these), and consider <b>fixed-point</b> instead of float on FPU-less chips. You don't have to decide now — but the data layout is where that fight happens.</div>
+  <p class="muted">Note these are simulation-grid sizes, totally separate from the 240×240 <em>display</em>. You simulate small and upscale when drawing (§12).</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="skeleton">
+  <h2 class="sec"><span class="n">11</span> Mapping to your <code>setup / loop / update</code></h2>
+  <p>Your Arduino skeleton already has the right bones. Here's how the §6 stages slot in — as a <b>structure</b>, with the bodies left empty on purpose:</p>
+  <pre><code><span class="tok-k">void</span> <span class="tok-f">setup</span>() {
+  <span class="tok-c">// allocate grids + particle array</span>
+  <span class="tok-c">// seed particles into a starting region (a disc of water)</span>
+  <span class="tok-c">// init the display driver</span>
+}
+
+<span class="tok-k">void</span> <span class="tok-f">loop</span>() {
+  <span class="tok-f">update</span>(dt);   <span class="tok-c">// advance physics one step</span>
+  <span class="tok-f">render</span>();    <span class="tok-c">// draw particles to the round screen</span>
+}
+
+<span class="tok-k">void</span> <span class="tok-f">update</span>(<span class="tok-k">float</span> dt) {
+  <span class="tok-f">particlesToGrid</span>();        <span class="tok-c">// §8  P2G  (+ save uPrev/vPrev)</span>
+  <span class="tok-f">markCells</span>();
+  <span class="tok-f">addGravity</span>(dt);           <span class="tok-c">// §6.3</span>
+  <span class="tok-f">project</span>(MAX_ITERS);       <span class="tok-c">// §7  the expensive one</span>
+  <span class="tok-f">gridToParticles</span>(ALPHA);   <span class="tok-c">// §8  G2P  + FLIP/PIC blend</span>
+  <span class="tok-f">advect</span>(dt);               <span class="tok-c">// §9  move + circle collision</span>
+}
+</code></pre>
+  <p>Each named function is one section above. That mapping — "section ↔ function" — is the scaffold; filling the bodies is the project.</p>
+  <div class="callout key"><span class="lbl">Prototype off-hardware first</span><br>You have no board, so build and debug the algorithm in the <b>test harness</b> (the other HTML file) where the same five functions exist as JS stubs and you can see every frame, slow it down, and step it. Once the behaviour is right there, porting the logic to C++ is mostly syntax. Get it correct where it's observable; optimise where it's constrained.</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="render">
+  <h2 class="sec"><span class="n">12</span> Drawing fluid to a circle</h2>
+  <p>The display is a <b>240×240 square framebuffer</b> with a round bezel — the corners exist in memory but aren't visible. Centre is (120,120), radius 120. A pixel is on-screen only if <code>(x−120)² + (y−120)² ≤ 120²</code>.</p>
+  <h3>Sim grid → screen pixels</h3>
+  <p>Your sim grid (say 64×64) is far coarser than 240×240, so you <b>upscale</b>. Two common approaches:</p>
+  <ul class="steps">
+    <li><b>Draw particles directly</b> as little blobs — map each particle's sim position to screen coordinates and splat a few pixels. Simple, looks like droplets. Great starting point.</li>
+    <li><b>Render a density/field</b> — for each screen pixel, find the sim cell it falls in and colour by fluid amount or speed. Smoother "body of water" look, more compute.</li>
+  </ul>
+  <h3>The round wall is a gift</h3>
+  <p>Because the visible area <em>is</em> a circle, the most natural boundary condition is "fluid is trapped inside a circular bowl." That's one clean collision rule (push particles back along the radius if they pass radius 120, and kill their outward velocity) and it matches what the user sees. Square-tank tutorials have four walls; you have one elegant curved one.</p>
+  <div class="callout warn"><span class="lbl">The other hardware tax</span><br>Even with physics free, pushing 240×240×2 bytes (~112 KB) over SPI every frame is real time. On hardware you'll redraw only changed regions and use DMA. In the harness this is instant — don't let that lull you; note where you'd batch writes.</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="order">
+  <h2 class="sec"><span class="n">13</span> A suggested build order</h2>
+  <p>Not instructions — a dependency order, so you don't get stuck building step 5 before step 2 works. Each milestone is independently visible in the harness.</p>
+  <ul class="steps">
+    <li><b>Particles + gravity + circle collision only.</b> No grid, no pressure. Dots fall and pool at the bottom of the circle. Proves rendering, the loop, dt, and collisions.</li>
+    <li><b>Add the grid + P2G/G2P with no pressure solve.</b> Confirms your transfers and weighting round-trip cleanly (fluid shouldn't gain/lose energy wildly).</li>
+    <li><b>Add gravity on the grid + a few pressure iterations.</b> Now it stops collapsing into a single point and starts behaving like a volume — the "aha" moment.</li>
+    <li><b>Tune:</b> iteration count, FLIP/PIC <code>α</code>, particle count, grid size. Build intuition for each knob.</li>
+    <li><b>Profile + port:</b> measure per-stage cost, shrink the grid / try fixed-point, then move to C++ and the real display.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ -->
+<section id="left">
+  <h2 class="sec"><span class="n">14</span> What I deliberately left for you</h2>
+  <div class="you">
+    <span class="lbl">Your implementation, on purpose</span>
+    <p style="margin:.5em 0 0">This document gives you the concepts, the data shapes, and the function map. It does <b>not</b> give you: the bilinear weight math, the staggered-index arithmetic, the divergence/pressure update equations, the FLIP blend wired up, or the collision projection. Those are exactly the parts where the understanding lives, and you asked to figure them out. The harness will show you, frame by frame, whether you got each one right.</p>
+  </div>
+  <p class="muted">When you want to be checked, unstuck, or taught a specific piece — ask, and I'll teach that piece without doing it for you. References worth keeping nearby: Bridson, <em>Fluid Simulation for Computer Graphics</em>; Zhu &amp; Bridson, <em>Animating Sand as a Fluid</em> (the PIC/FLIP paper); and Matthias Müller's "Ten Minute Physics" FLIP video for a code-shaped walkthrough.</p>
+</section>
+
+</main>
+</div>
+</body>
+</html>

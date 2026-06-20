@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>10-Across LED Matrix — 2″ round preview &amp; harness</title>
+<style>
+  :root{
+    --bg:#0a0e12; --panel:#121922; --panel2:#0f151c; --ink:#dfe7ef; --muted:#8da0b3;
+    --line:#1f2a36; --accent:#33c6dc; --accent2:#5ad1a8; --warn:#e0a84b; --bad:#e06b6b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex;min-height:100vh}
+  .stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:30px}
+  canvas#screen{background:#05070a;border-radius:50%;display:block;cursor:crosshair;
+    box-shadow:0 0 0 3px #15110a, inset 0 0 18px rgba(0,0,0,.65)}
+  /* ---- pocket-watch encasement (modelled at ~2 inches) ---- */
+  .watch{display:flex;flex-direction:column;align-items:center}
+  .stem{display:flex;flex-direction:column;align-items:center;margin-bottom:-8px;z-index:2}
+  .bow{width:46px;height:46px;border-radius:50%;border:9px solid #cfa848;
+    border-top-color:#f3da8e;border-bottom-color:#7e6320;background:transparent;
+    box-shadow:0 2px 6px rgba(0,0,0,.55)}
+  .crown{width:28px;height:17px;margin-top:-3px;border-radius:5px 5px 4px 4px;
+    background:linear-gradient(180deg,#f3da8e,#9c7a2e);box-shadow:0 2px 4px rgba(0,0,0,.5)}
+  .case{position:relative;width:520px;height:520px;border-radius:50%;padding:20px;
+    background:conic-gradient(from 90deg,#7a5f24,#f0d488,#fff7d6,#c79b3a,#6e5523,#e7c66b,#fff7d6,#c79b3a,#7a5f24);
+    box-shadow:0 22px 55px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.25)}
+  .glass{position:absolute;inset:20px;border-radius:50%;pointer-events:none;z-index:3;
+    background:linear-gradient(135deg,rgba(255,255,255,.16),rgba(255,255,255,.05) 28%,transparent 52%)}
+  .dim{display:flex;align-items:center;gap:9px;width:520px;color:var(--muted);font-size:12px;margin-top:14px;letter-spacing:.03em}
+  .dim .line{flex:1;height:1px;background:#3a4656}
+  .dim .tick{width:1px;height:9px;background:#3a4656}
+  .hint{color:var(--muted);font-size:13px;max-width:520px;text-align:center}
+  aside{width:344px;background:var(--panel2);border-left:1px solid var(--line);padding:24px 22px;overflow:auto}
+  aside h1{font-size:17px;margin:0 0 2px}
+  aside .sub{color:var(--muted);font-size:12.5px;margin-bottom:18px}
+  .ctrls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  button{font:inherit;font-size:13px;font-weight:600;color:var(--ink);background:#172029;border:1px solid var(--line);
+    padding:8px 14px;border-radius:9px;cursor:pointer;transition:.12s}
+  button:hover{border-color:var(--accent);color:#fff}
+  button.primary{background:var(--accent);color:#04141a;border-color:var(--accent)}
+  button.primary:hover{background:#5ad7e8}
+  .stats{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-variant-numeric:tabular-nums}
+  .stat{display:flex;justify-content:space-between;padding:3px 0;font-size:13px}
+  .stat .k{color:var(--muted)} .stat .v{font-weight:600}
+  .stat .v.good{color:var(--accent2)} .stat .v.warn{color:var(--warn)} .stat .v.bad{color:var(--bad)}
+  label.row{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);margin:9px 0}
+  label.chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);margin:7px 0;cursor:pointer}
+  input[type=range]{flex:1;accent-color:var(--accent)} input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px}
+  .err{display:none;background:#1f1212;border:1px solid #4a2222;color:#f3b4b4;border-radius:9px;padding:10px 12px;font-size:12.5px;margin-bottom:16px;white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace}
+  .api{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:12.5px;margin-top:4px}
+  .api h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:0 0 8px}
+  .api code{background:#0a0f14;padding:1px 5px;border-radius:4px;color:#bfe7ef;font-size:12px}
+  .api .d{color:var(--muted);display:block;margin:2px 0 8px}
+  .note{font-size:12px;color:var(--muted);margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="watch">
+    <div class="stem"><div class="bow"></div><div class="crown"></div></div>
+    <div class="case">
+      <canvas id="screen" width="480" height="480"></canvas>
+      <div class="glass"></div>
+    </div>
+  </div>
+  <div class="dim"><span class="tick"></span><span class="line"></span><span>≈ 2 in · 51 mm</span><span class="line"></span><span class="tick"></span></div>
+  <div class="hint">A <b>10-across</b> addressable matrix filling the 2″ round board at a realistic ~5&nbsp;mm pitch — the outer LEDs now sit about half a package in from the rim, which is as close as 5050-class parts can safely go. Only the true corners of the 10×10 grid are dropped. The rainbow sweep is a self-test; delete it and drive the LEDs from your sim. Toggle the data path to see the serpentine chain order.</div>
+</div>
+
+<aside>
+  <h1>10× LED Matrix · 2″</h1>
+  <div class="sub">circular WS2812-style preview &amp; sim harness</div>
+
+  <div class="ctrls">
+    <button id="btnPlay" class="primary">▶ Play</button>
+    <button id="btnStep">⏭ Step</button>
+    <button id="btnReset">↻ Reset</button>
+  </div>
+
+  <div id="err" class="err"></div>
+
+  <div class="stats">
+    <div class="stat"><span class="k">State</span><span id="sState" class="v">paused</span></div>
+    <div class="stat"><span class="k">Active LEDs</span><span id="sCount" class="v">—</span></div>
+    <div class="stat"><span class="k">Frame</span><span id="sFrame" class="v">0</span></div>
+    <div class="stat"><span class="k">FPS</span><span id="sFps" class="v">—</span></div>
+    <div class="stat"><span class="k">Logic time / frame</span><span id="sMs" class="v">—</span></div>
+    <div class="stat"><span class="k">Lit LEDs</span><span id="sLit" class="v">—</span></div>
+    <div class="stat"><span class="k">Est. current @5V</span><span id="sAmp" class="v">—</span></div>
+    <div class="stat"><span class="k">Gravity dir (grid)</span><span id="sGrav" class="v">(0.00, 1.00)</span></div>
+  </div>
+
+  <label class="row">speed <input id="speed" type="range" min="0" max="200" value="100"><span id="speedV" style="color:var(--ink);width:38px;text-align:right">1.0×</span></label>
+  <label class="row">rotate <input id="rot" type="range" min="0" max="360" value="0"><span id="rotV" style="color:var(--ink);width:38px;text-align:right">0°</span></label>
+  <label class="row">grid <input id="grid" type="range" min="10" max="24" value="10"><span id="gridV" style="color:var(--ink);width:46px;text-align:right">10×10</span></label>
+  <label class="chk"><input type="checkbox" id="diff" checked> diffuser glow (vs. raw dots)</label>
+  <label class="chk"><input type="checkbox" id="chain"> show data chain order</label>
+
+  <div class="api">
+    <h2>What the harness gives you</h2>
+    <code>Matrix.COLS</code> / <code>Matrix.ROWS</code> <span class="d">10 × 10 grid</span>
+    <code>Matrix.count</code> <span class="d">how many LEDs are actually on the board</span>
+    <code>setLED(col, row, r, g, b)</code> <span class="d">light one LED (ignored if that cell isn't a real LED)</span>
+    <code>clearLEDs()</code> <span class="d">all off</span>
+    <code>isLED(col, row)</code> <span class="d">true if a real LED lives there</span>
+    <code>ledIndex(col, row)</code> <span class="d">its position in the data chain, or −1</span>
+    <code>pointer</code> <span class="d">{col, row, down} — nearest LED under the mouse</span>
+    <code>gravityDir</code> <span class="d">{x, y} unit vector — which way is "down" in the grid as you rotate</span>
+    <code>state</code> <span class="d">persists between frames — your grids/particles go here</span>
+  </div>
+
+  <div class="note">
+    Edit <b>setup()</b>, <b>update(dt)</b>, <b>render()</b> at the top of the source — same shape as your sketch, but you now address <em>LEDs</em>, not pixels. A 10×10 board maps one-to-one to a 10×10 FLIP grid, so there's no upscaling: sim cell → <code>setLED(col,row,…)</code>.<br><br>
+    The current readout assumes ~60 mA per LED at full white — watch it climb as you light the board; that's your power-budget lesson, live.<br><br>
+    See also: <a href="display-emulator.html">240×240 LCD emulator</a> · <a href="physics-and-code.html">physics &amp; code map</a>
+  </div>
+</aside>
+
+<script src="../src/sim.js"></script>
+<script src="../src/engine.js"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+# --- Editor / local history ---
+.history/
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+
+# --- Build artifacts (Arduino / PlatformIO) ---
+.pio/
+build/
+*.o
+*.elf
+*.hex
+*.bin
+
+# --- KiCad ---
+# keep the project, schematic, and board; ignore backups, caches, and local prefs
+*-backups/
+*.kicad_pcb-bak
+*.kicad_sch-bak
+*.bak
+*.kicad_prl
+fp-info-cache
+_autosave-*
+\#auto_saved_files#
+*~
