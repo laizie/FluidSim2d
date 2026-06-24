@@ -3,10 +3,10 @@
 // Globals provided by engine.js: Matrix, gravityDir, setLED, clearLEDs, isLED, pointer.
 
 const GRAVITY = 100;       // Gravity
-const ALPHA = 0.95;       // Higher -> more FLIP | Lower -> more SPH
+const ALPHA = 0.90;       // Higher -> more FLIP | Lower -> more SPH
 const RESTITUTION = 0.6;  // Higher -> particles bouncier | Lower -> particles smoother
 const minDist = 0.9;      // particles want to be ~1 cell apart
-const h = 4.0;            // Cohesion reach > minDist
+const h = 1.0;            // Cohesion reach > minDist
 const strength = 1;       // Pull strength for cohesion
 
 // these follow the grid-size slider (10–24) — set in setup() from Matrix.COLS
