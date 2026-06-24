@@ -35,8 +35,8 @@ To learn, I had Claude help develop an explanation of flip fluids that are fit f
 
 ## Status
 
-See [ROADMAP.md](ROADMAP.md) for what's next.
+Working on C++ code now to put on ESP32.
 
 ## Credit
-Idea credit fully given to [mitxela](https://mitxela.com/projects/fluid-pendante).
+Idea credit fully given to [mitxela](https://mitxela.com/projects/fluid-pendant).
 First given the idea from his video [here](https://www.youtube.com/watch?v=jis1MC5Tm8k).
