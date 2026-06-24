@@ -10,7 +10,7 @@ const h = 1.0;            // Cohesion reach > minDist
 const strength = 1;       // Pull strength for cohesion
 
 // these follow the grid-size slider (10–24) — set in setup() from Matrix.COLS
-let GRID_AMT = 10;        // Size of grid
+let GRID_AMT = 16;        // Size of grid
 let CENTER;               // Position of center  = (GRID_AMT - 1) / 2
 let RADIUS;               // bowl radius         ≈ half the grid
 let NUM_PARTICLES;        // scales with grid area so density stays ~constant
