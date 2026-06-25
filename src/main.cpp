@@ -2,12 +2,39 @@
 #include <vector>
 #include <Adafruit_GFX.h>
 #include <Adafruit_GC9A01A.h>
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
+#include <Wire.h>
+#include <SPI.h>
 
 // 10x10 display circular
 
 // ----------------------DISPLAY----------------------
 
+#define TFT_SCL  4
+#define TFT_SDA  6
+#define TFT_CS   7
+#define TFT_DC   5
+#define TFT_RES  3
 
+#define I2C_SDA  0
+#define I2C_SCL  1
+
+SPIClass spi(FSPI);
+
+Adafruit_GC9A01A tft(&spi, TFT_CS, TFT_DC, TFT_RES);
+
+#define DISP_SIZE 240
+#define CELL_PX (DISP_SIZE / GRID_AMT)
+
+#define COLOR_BG 0x0000      // Black
+#define COLOR_WATER 0x1C9F   // Blue
+
+bool prevFilled[GRID_AMT][GRID_AMT];
+
+// ----------------------ACCELEROMETER----------------------
+
+Adafruit_MPU6050 mpu;
 
 // ----------------------VARS----------------------
 
@@ -294,6 +321,26 @@ void applyCohesion(float dt) {
   }
 }
 
+/**
+ * 
+ */
+void updateGravity() {
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp);
+
+  float ax = a.acceleration.x;
+  float ay = a.acceleration.y;
+
+  float mag = sqrt(ax * ax + ay * ay);
+  if (mag > 0.5f) {
+    float nx = ax / mag;
+    float ny = ay / mag;
+
+    gd.gravX = 0.85f * gd.gravX + 0.15f * nx;
+    gd.gravY = 0.85f * gd.gravY + 0.15f * ny;
+  }
+}
+
 // ----------------------UPDATE----------------------
 
 /**
@@ -351,7 +398,26 @@ void update(float dt) {
  * Renders the particles to the display
  */
 void render() {
+  // Find which cells contain at least one particle this frame
+  bool filled[GRID_AMT][GRID_AMT] = {{false}};
+  for (Particle& p: state.particles) {
+    int ci = (int)floor(p.col);
+    int cj = (int)floor(p.row);
+    if (ci >= 0 && ci < GRID_AMT && cj >= 0 && cj < GRID_AMT) {
+      filled[ci][cj] = true;
+    }
+  }
 
+  // Repaint only the cells whose state flipped 
+  for (int i = 0; i < GRID_AMT; i++) {       // i = column
+    for (int j = 0; j < GRID_AMT; j++) {     // j = row
+      if (filled[i][j] != prevFilled[i][j]) {
+        uint16_t color = filled[i][j] ? COLOR_WATER : COLOR_BG;
+        tft.fillRect(i * CELL_PX, j * CELL_PX, CELL_PX, CELL_PX, color);
+        prevFilled[i][j] = filled[i][j];
+      }
+    }
+  }
 }
 
 // ----------------------ARDUINO----------------------
@@ -365,6 +431,14 @@ void setup() {
   // seed particles into a starting region (a disc of water)
   initializeParticles();
 
+  Wire.begin(I2C_SDA, I2C_SCL); // I2C for the MPU
+  mpu.begin();
+
+  spi.begin(TFT_SCL, -1, TFT_SDA, TFT_CS);
+  tft.begin();
+  tft.fillScreen(COLOR_BG);
+  memset(prevFilled, 0, sizeof prevFilled);
+
   // allocate grids + particle array
   makeGrid(state.gridVx);
   makeGrid(state.gridVy);
@@ -377,6 +451,7 @@ void setup() {
  * Advances the physics by one step, and draws the particles to the screen.
  */
 void loop() {
+  updateGravity();
   update(DT);   // advance physics one step
   render();     // draw particles to the round screen
 }
