@@ -9,32 +9,22 @@
 
 // 10x10 display circular
 
-// ----------------------DISPLAY----------------------
+// ----------------------PINS----------------------
 
+/**
+ * SCL: 4, SDA: 6, CS: 7, DC: 5, RES:3, GND: GND, VIN: 3.3V, BLK: 3.3V
+ */
+
+ /** TFT Pins */
 #define TFT_SCL  4
 #define TFT_SDA  6
 #define TFT_CS   7
 #define TFT_DC   5
 #define TFT_RES  3
 
+/** I2C Pins */
 #define I2C_SDA  0
 #define I2C_SCL  1
-
-SPIClass spi(FSPI);
-
-Adafruit_GC9A01A tft(&spi, TFT_CS, TFT_DC, TFT_RES);
-
-#define DISP_SIZE 240
-#define CELL_PX (DISP_SIZE / GRID_AMT)
-
-#define COLOR_BG 0x0000      // Black
-#define COLOR_WATER 0x1C9F   // Blue
-
-bool prevFilled[GRID_AMT][GRID_AMT];
-
-// ----------------------ACCELEROMETER----------------------
-
-Adafruit_MPU6050 mpu;
 
 // ----------------------VARS----------------------
 
@@ -70,6 +60,12 @@ Adafruit_MPU6050 mpu;
 
 /** Strength of cohesion */
 #define COHESION_STRENGTH 1.0f
+
+#define DISP_SIZE 240
+#define CELL_PX (DISP_SIZE / GRID_AMT)
+
+#define COLOR_BG 0x0000      // Black
+#define COLOR_WATER 0x1C9F   // Blue
 
 // ----------------------GRID VARS----------------------
 /** Position of the center of grid */
@@ -134,6 +130,22 @@ struct GravityDir {
   /** Gravity vector in y direction */
   float gravY = 1.0f;
 };
+
+// ----------------------DISPLAY----------------------
+
+/** Initialize SPI class */
+SPIClass spi(FSPI);
+
+/** Initialize tft display */
+Adafruit_GC9A01A tft(&spi, TFT_CS, TFT_DC, TFT_RES);
+
+/** Initialize boolean previous filled */
+bool prevFilled[GRID_AMT][GRID_AMT];
+
+// ----------------------ACCELEROMETER----------------------
+
+/** Initialize accelerometer */
+Adafruit_MPU6050 mpu;
 
 // ----------------------STRUCT INITS----------------------
 
@@ -322,36 +334,33 @@ void applyCohesion(float dt) {
 }
 
 /**
- * 
+ * Updates gravity direction based on accelerometer
  */
-void updateGravity() {
+void updateGravityDirection() {
+  // Gets the accelerometer reading
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
 
+  // Defines directions of accelerometer
   float ax = a.acceleration.x;
   float ay = a.acceleration.y;
 
+  // Get unit vector
   float mag = sqrt(ax * ax + ay * ay);
   if (mag > 0.5f) {
     float nx = ax / mag;
     float ny = ay / mag;
 
+    // Change gravity direction
     gd.gravX = 0.85f * gd.gravX + 0.15f * nx;
     gd.gravY = 0.85f * gd.gravY + 0.15f * ny;
   }
 }
 
-// ----------------------UPDATE----------------------
-
 /**
- * Updates all particles on the grid
+ * Applies gravity to particles
  */
-void update(float dt) {
-  particlesToGrid();
-  copyGrid(state.gridVx, state.gridVxOld);
-  copyGrid(state.gridVy, state.gridVyOld);
-
-  // Start particles in the middle for however many there are
+void applyGravity() {
   for (int i = 0; i < GRID_AMT; i++) {
     for (int j = 0; j < GRID_AMT; j++) {
       if (state.weight[i][j] > 0) {
@@ -360,11 +369,12 @@ void update(float dt) {
       }
     }
   }
+}
 
-  gridToParticles();
-  applyCohesion(dt);
-  pushParticlesApart();
-
+/**
+ * Apply Euler and Newtons law to reflect on impacts
+ */
+void applyImpacts() {
   for (Particle& p: state.particles) {
     // Calculates for new velocity
     p.row += p.vy * dt;
@@ -390,6 +400,24 @@ void update(float dt) {
       }
     }
   }
+}
+// ----------------------UPDATE----------------------
+
+/**
+ * Updates all particles on the grid
+ */
+void update(float dt) {
+  particlesToGrid();
+  copyGrid(state.gridVx, state.gridVxOld);
+  copyGrid(state.gridVy, state.gridVyOld);
+
+  applyGravity();
+
+  gridToParticles();
+  applyCohesion(dt);
+  pushParticlesApart();
+
+  applyImpacts();
 }
 
 // ----------------------RENDER----------------------
@@ -427,13 +455,14 @@ void render() {
  * into a starting position, initializes the display driver.
  */
 void setup() {
-  // init the display driver
-  // seed particles into a starting region (a disc of water)
+  // seed particles into a starting region
   initializeParticles();
 
+  // Initialize I2C and accelerometer
   Wire.begin(I2C_SDA, I2C_SCL); // I2C for the MPU
   mpu.begin();
 
+  // Initialize the display
   spi.begin(TFT_SCL, -1, TFT_SDA, TFT_CS);
   tft.begin();
   tft.fillScreen(COLOR_BG);
@@ -451,7 +480,7 @@ void setup() {
  * Advances the physics by one step, and draws the particles to the screen.
  */
 void loop() {
-  updateGravity();
-  update(DT);   // advance physics one step
-  render();     // draw particles to the round screen
+  updateGravityDirection();  // Update gravity based on accelerometer
+  update(DT);       // advance physics one step
+  render();         // draw particles to the round screen
 }
