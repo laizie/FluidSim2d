@@ -11,18 +11,20 @@
 
 // ----------------------PINS----------------------
 
-/**
- * SCL: 4, SDA: 6, CS: 7, DC: 5, RES:3, GND: GND, VIN: 3.3V, BLK: 3.3V
- */
+/** DISPLAY PINS */
+// SCL: 4 | SDA: 6 | CS: 7 | DC: 5 | RES:3 | GND: GND | VIN: 3.3V | BLK: 3.3V
 
- /** TFT Pins */
+/** Display Pins */
 #define TFT_SCL  4
 #define TFT_SDA  6
 #define TFT_CS   7
 #define TFT_DC   5
 #define TFT_RES  3
 
-/** I2C Pins */
+/** Accelerometer Pins */
+// SDA: 0 | SCL: 1 | GND: GND | VCC: 3.3V
+
+/** Accelerometer Pins */
 #define I2C_SDA  0
 #define I2C_SCL  1
 

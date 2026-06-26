@@ -4,7 +4,7 @@ A real‑time **FLIP fluid simulation** for a **2‑inch round LED pocket watch*
 
 - Claude helped develop an html for being able to see the simulation and make live updates in a browser.
 - Personally developed the javascript code to be ran in the html, next is to translate the javascript to c++ code to be ran on an ESP32.
-- The plan is to have the physics designed to port cleanly to an ESP32 driving a circular addressable‑LED matrix.
+- The plan is to have the physics designed to port cleanly to an ESP32-C3 Super Mini driving a circular addressable‑LED matrix.
 
 ## Run the simulator
 
